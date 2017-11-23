@@ -1,0 +1,16 @@
+{
+  "name": "googlehome-lgtv",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "firebase-admin": "^5.5.0",
+    "lgtv2": "^1.4.1",
+    "wake_on_lan": "0.0.4"
+  }
+}
