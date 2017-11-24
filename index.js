@@ -2,13 +2,10 @@
 
 let self = this;
 const appconfig = require('./appconfig.json');
-
 const lgtv = require("lgtv2")({
     url: appconfig.TV_URL
 });
-
 const firebase = require("firebase-admin");
-
 const wol = require('wake_on_lan');
 //const tvurl = 'ws://192.168.0.50:3000';
 
@@ -27,34 +24,44 @@ self.tvurl = appconfig.TV_URL;
 self.init = false;
 self.channelHash = {};
 self.event = {};
+self.setEvent = (event) => {
+  this.event = event;
+}
+self.getEvent = () => {
+  return this.event;
+}
 
 
 const lgtvHandler = {
-    "won" : (resolve, reject)=>{
+    "won" : (event, resolve, reject)=>{
         wol.wake(appconfig.TV_MAC, (error)=> {
-            if (error) return callback(new Error('webOS3 wake on lan error'));
-               // setTimeout(self.lgtvWOLConnect.bind(self), 5000);
-          })
+          resolve();
+        })
     },
-    "off" : (resolve, reject)=>{
-
+    "off" : (event, resolve, reject)=>{
+      lgtv.request('ssap://system/turnOff', function (err, res) {
+        resolve();
+      });
     },
-    "volume" : (volume, resolve, reject)=>{
-
+    "volume" : (event, resolve, reject)=>{
+        const vol = event.param;
+        lgtv.request('ssap://audio/setVolume', {volume: vol} , (err,res)=>{
+            resolve();
+        });
     },
-    "channel" : (channel, resolve, reject) => {
+    "channel" : (event, resolve, reject) => {
+        const channel = event.param;
         lgtv.request('ssap://tv/getCurrentChannel', (err,res)=>{
         //console.log(res);
             let key = res.channelModeId.toString() + "_" + channel.toString();
-            if (key in self.channelHash) {
-                let channelId = self.channelHash[key].channelId;
-                lgtv.request('ssap://tv/openChannel',{channelId:channelId}, (err,res)=>{
-                    resolve();
-                });
+            if (!(key in self.channelHash)) {
+              return resolve();
             }
-            else{
+
+            let channelId = self.channelHash[key].channelId;
+            lgtv.request('ssap://tv/openChannel',{channelId:channelId}, (err,res)=>{
                 resolve();
-            }
+            });
         });
     }
 }
@@ -99,7 +106,8 @@ lgtv.on('connect', () => {
         });
     }).then( ()=>{
         return new Promise( (resolve, reject) => {
-            lgtvHandler[self.event.type]( self.event.param, resolve, reject );
+            const event = self.getEvent()
+            lgtvHandler[event.type]( event.param, resolve, reject );
         })
     })
     .then( ()=>{
@@ -109,7 +117,7 @@ lgtv.on('connect', () => {
         });
 
     });
-    
+
 });
 
 
@@ -122,10 +130,11 @@ lgtv.on('close', function() {
 lgtvActionRef.on("value", function(snapshot) {
         console.log(snapshot.val());
 //        self.event = snapshot.val();
-        self.event.type = "channel";
-        self.event.param = 3;
+        self.setEvent({type:"channel",{param:"3"}});
+//        self.event.type = "channel";
+//        self.event.param = 3;
         //self.lgtv.disconnect()
-        self.lgtv.connect(self.tvurl,"aa");
+        self.lgtv.connect(self.tvurl);
         /*
         self.lgtvWOLConnect( function(){
             lgtv.request('ssap://tv/getChannelList', function(err,res){
@@ -141,56 +150,8 @@ lgtvActionRef.on("value", function(snapshot) {
     });
 
 
-self.lgtvWOLConnect = function(callback){
-    if( this.connected ){
-        this.retryCount = 0;
-        return callback();
-    }
-    else{
-        if( this.retryCount < 10 ){
-            this.lgtv.connect(this.tvurl);
-            this.retryCount++;
-            setTimeout(this.lgtvWOLConnect.bind(this,callback), 1000);
-        }
-        else{
-            this.retryCount=0;
-            return false;
-        }
-    }
-}
-
-
 
 lgtv.on('error', function (err) {
-    console.log(err);
+  lgtv.request('ssap://system.notifications/createToast', {message: err});
+  console.log(err);
 });
-
-/*
-lgtv.on('connect', function () {
-    console.log('connected');
-
-    lgtv.request('ssap://tv/getExternalInputList', function(err,res){
-        console.log(res);
-    });
-
-
-    lgtv.request('ssap://system.launcher/launch', {id: 'com.webos.app.livetv'}, function(err,res){
-        //res.channelList.forEach( function(a){ console.log(a.channelNumber + "," + a.channelName + ","+ a.channelId); });
-        console.log(res);
-    });
-
-
-    // firebase LINE BOTの受信
-    lgtvActionRef.on("value", function(snapshot) {
-        console.log(snapshot.val());
-
-
-        //  console.log(snapshot.val());
-    }, function (errorObject) {
-        console.log("The read failed: " + errorObject.code);
-    });
-
-});
-*/
-//lgtv.disconnect();
-
