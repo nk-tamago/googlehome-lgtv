@@ -3,6 +3,14 @@ googlehome-lgtv
 
 google-homeが音声インターフェースとなって、LG製(WebOS)のテレビコントロールを可能とします
 
+## Description
+ - 電源ON
+ - 電源OFF
+ - チャンネル変更
+ - ボリューム変更
+ - テレビ切り替え
+ - 番組表
+
 ## Requirement
 googlehome-lgtv requires the following to run:
 
